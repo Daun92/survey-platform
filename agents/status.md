@@ -7,7 +7,7 @@
 
 | 에이전트 ID | 역할 | 작업 내용 | 수정 중인 파일/영역 | 상태 | 시작 시각 |
 |------------|------|----------|-------------------|------|----------|
-| <!-- 예시: agent-frontend-1 | frontend | 로그인 페이지 구현 | apps/frontend/src/app/auth/ | 🔄 진행중 | 2026-03-14 14:00 --> |
+| (현재 활성 에이전트 없음) | | | | | |
 
 ## 잠금 영역 (Locked Zones)
 
@@ -16,20 +16,34 @@
 
 | 영역 | 잠금 에이전트 | 사유 | 설정 시각 |
 |------|-------------|------|----------|
-| <!-- 예시: DB 마이그레이션 | agent-backend-1 | users 테이블 생성 | 2026-03-14 15:00 --> |
+| (잠금 없음) | | | |
 
 ## 최근 완료된 작업
 
 | 에이전트 ID | 작업 내용 | 완료 시각 | 워크로그 참조 |
 |------------|----------|----------|-------------|
-| <!-- 예시: agent-shared-1 | 공유 타입 정의 | 2026-03-14 13:00 | worklog/2026-03-14_phase1_shared-types.md --> |
+| agent-infra-1 | Phase 1 W3 Project/Survey CRUD + RBAC + 대시보드 | 2026-03-14 | worklog/2026-03-14_phase1_w3_crud.md |
+| agent-infra-1 | Phase 1 W2 Auth + User/Department + 로그인 | 2026-03-14 | worklog/2026-03-14_phase1_w2_auth.md |
+| agent-infra-1 | Phase 1 W1 모노레포+인프라+부트스트랩 | 2026-03-14 | worklog/2026-03-14_phase1_w1_setup.md |
+| agent-design-1 | 디자인 시스템 & UI/UX 컨셉 정의 | 2026-03-14 | worklog/2026-03-14_phase0_design-concept.md |
 
 ## 다음 에이전트 TODO
 
-> 완료된 에이전트가 다음 에이전트에게 넘기는 작업 목록입니다.
+> Phase 1 완료. Phase 2 작업 목록입니다.
 
-### 미할당 작업
-- <!-- 예시: [ ] apps/frontend/ 라우팅 설정 (의존: 공유 타입 정의 완료) -->
+### Phase 2 — Step 1 [순차: infra] — 공유 타입 정의
+- [ ] `packages/shared/`에 10가지 질문 타입 인터페이스 정의 — `agent-infra-1`
+
+### Phase 2 — Step 2 [병렬: frontend + backend] (의존: Step 1 완료)
+- [ ] 설문 에디터 UI (3열 레이아웃, D&D, 질문 타입별 컴포넌트) — `agent-frontend-1`
+- [ ] Question 엔티티 + CRUD API + 설문 발행/마감 API — `agent-backend-1`
+
+### 디자인 시스템 반영
+- [x] globals.css 오렌지 포인트 컬러 적용 ✅
+- [ ] Pretendard 폰트 추가 (Phase 5로 연기 — CDN/로컬 결정 필요)
+- [x] 다크 모드 토글 (next-themes) ✅
+- [x] 사이드바 개선 (접기, 아이콘, 네비 확장) ✅
+- [x] FAB 컴포넌트 추가 ✅
 
 ## 의사결정 충돌 로그
 
