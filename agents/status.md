@@ -38,12 +38,12 @@
 - [ ] 설문 에디터 UI (3열 레이아웃, D&D, 질문 타입별 컴포넌트) — `agent-frontend-1`
 - [ ] Question 엔티티 + CRUD API + 설문 발행/마감 API — `agent-backend-1`
 
-### 디자인 시스템 반영 (현재 진행 중)
-- [ ] globals.css 오렌지 포인트 컬러 적용
-- [ ] Pretendard 폰트 추가
-- [ ] 다크 모드 토글 (next-themes)
-- [ ] 사이드바 개선 (접기, 아이콘, 네비 확장)
-- [ ] FAB 컴포넌트 추가
+### 디자인 시스템 반영
+- [x] globals.css 오렌지 포인트 컬러 적용 ✅
+- [ ] Pretendard 폰트 추가 (Phase 5로 연기 — CDN/로컬 결정 필요)
+- [x] 다크 모드 토글 (next-themes) ✅
+- [x] 사이드바 개선 (접기, 아이콘, 네비 확장) ✅
+- [x] FAB 컴포넌트 추가 ✅
 
 ## 의사결정 충돌 로그
 
