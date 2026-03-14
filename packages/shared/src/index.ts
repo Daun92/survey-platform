@@ -81,6 +81,41 @@ export interface DepartmentResponse {
   createdAt: string;
 }
 
+// === Survey & Project Types ===
+
+export enum SurveyStatus {
+  DRAFT = 'draft',
+  ACTIVE = 'active',
+  CLOSED = 'closed',
+  ARCHIVED = 'archived',
+}
+
+export interface ProjectResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  ownerId: string;
+  ownerName: string;
+  surveyCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SurveyResponse {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  status: SurveyStatus;
+  startsAt: string | null;
+  endsAt: string | null;
+  createdById: string;
+  createdByName: string;
+  responseCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {
