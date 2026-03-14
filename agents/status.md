@@ -28,11 +28,27 @@
 
 > 완료된 에이전트가 다음 에이전트에게 넘기는 작업 목록입니다.
 
-### 미할당 작업
-- [ ] Phase 1: 모노레포 세팅 (pnpm + Turborepo) — infra 역할
-- [ ] Phase 1: Next.js 15 초기화 + shadcn/ui + 디자인 토큰 적용 — frontend 역할 (의존: 모노레포 세팅, 디자인 시스템 참조 `docs/design-system.md`)
-- [ ] Phase 1: NestJS 부트스트랩 — backend 역할 (의존: 모노레포 세팅)
-- [ ] Phase 1: Docker Compose 구성 — infra 역할
+### Phase 1 — Step 1 [순차: infra]
+- [ ] 모노레포 세팅 (pnpm + Turborepo + pnpm-workspace.yaml) — `agent-infra-1`
+- [ ] Docker Compose 구성 (PostgreSQL 16, Redis 7) — `agent-infra-1`
+- [ ] packages/shared 초기 구조 (tsconfig, index.ts) — `agent-infra-1`
+- [ ] apps/frontend, apps/backend 디렉토리 뼈대 — `agent-infra-1`
+
+### Phase 1 — Step 2 [병렬: frontend + backend] (의존: Step 1 완료)
+- [ ] Next.js 15 초기화 + Tailwind + shadcn/ui + 디자인 토큰 — `agent-frontend-1`
+  - 참조: `docs/design-system.md`
+- [ ] NestJS 부트스트랩 + TypeORM 설정 + DB 연결 — `agent-backend-1`
+
+### Phase 1 — Step 3 [순차: infra]
+- [ ] packages/shared에 공유 타입 정의 (auth, survey) — `agent-infra-1`
+
+### Phase 1 — Step 4 [병렬: frontend + backend] (의존: Step 3 완료)
+- [ ] JWT 인증 모듈 + User 엔티티 + Auth API — `agent-backend-1`
+- [ ] 로그인/회원가입 UI + 사이드바+헤더 레이아웃 — `agent-frontend-1`
+
+### Phase 1 — Step 5 [병렬: frontend + backend]
+- [ ] Survey CRUD API + 엔티티 설계 — `agent-backend-1`
+- [ ] 설문 목록 페이지 + SurveyCard + FAB — `agent-frontend-1`
 
 ## 의사결정 충돌 로그
 
