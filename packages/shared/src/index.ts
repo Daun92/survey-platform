@@ -36,6 +36,51 @@ export interface HealthCheckResult {
   details?: Record<string, { status: string; message?: string }>;
 }
 
+// === User & Auth Types ===
+
+export enum UserRole {
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  USER = 'user',
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  departmentId: string | null;
+  departmentName: string | null;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+  departmentId?: string;
+}
+
+export interface AuthTokenResponse {
+  accessToken: string;
+  user: UserResponse;
+}
+
+export interface DepartmentResponse {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  createdAt: string;
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {
