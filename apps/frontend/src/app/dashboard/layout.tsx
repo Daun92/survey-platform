@@ -1,5 +1,6 @@
 import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
+import { FAB } from '@/components/fab';
 
 export default function DashboardLayout({
   children,
@@ -15,6 +16,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <FAB />
     </div>
   );
 }
