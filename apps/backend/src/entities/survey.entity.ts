@@ -5,11 +5,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { SurveyStatus } from '@survey/shared';
 import { Project } from './project.entity';
 import { User } from './user.entity';
+import { Question } from './question.entity';
 
 @Entity('surveys')
 export class Survey {
@@ -44,6 +46,9 @@ export class Survey {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'createdById' })
   createdBy: User;
+
+  @OneToMany(() => Question, (question) => question.survey)
+  questions: Question[];
 
   @CreateDateColumn()
   createdAt: Date;
