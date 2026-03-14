@@ -116,6 +116,85 @@ export interface SurveyResponse {
   updatedAt: string;
 }
 
+// === Question Types ===
+
+export enum QuestionType {
+  SHORT_TEXT = 'short_text',
+  LONG_TEXT = 'long_text',
+  RADIO = 'radio',
+  CHECKBOX = 'checkbox',
+  DROPDOWN = 'dropdown',
+  LINEAR_SCALE = 'linear_scale',
+  DATE = 'date',
+  FILE_UPLOAD = 'file_upload',
+  MATRIX = 'matrix',
+  RANKING = 'ranking',
+}
+
+export interface QuestionOption {
+  id: string;
+  label: string;
+  value: string;
+  order: number;
+}
+
+export interface LinearScaleConfig {
+  min: number;
+  max: number;
+  minLabel?: string;
+  maxLabel?: string;
+  step: number;
+}
+
+export interface MatrixConfig {
+  rows: QuestionOption[];
+  columns: QuestionOption[];
+  allowMultiple: boolean;
+}
+
+export interface FileUploadConfig {
+  maxFileSize: number;
+  maxFileCount: number;
+  allowedTypes: string[];
+}
+
+export interface ValidationRule {
+  required: boolean;
+  minLength?: number;
+  maxLength?: number;
+  minSelect?: number;
+  maxSelect?: number;
+  pattern?: string;
+  customMessage?: string;
+}
+
+export interface QuestionOptions {
+  choices?: QuestionOption[];
+  linearScale?: LinearScaleConfig;
+  matrix?: MatrixConfig;
+  fileUpload?: FileUploadConfig;
+  placeholder?: string;
+  maxRows?: number;
+}
+
+export interface QuestionResponse {
+  id: string;
+  surveyId: string;
+  type: QuestionType;
+  title: string;
+  description: string | null;
+  required: boolean;
+  order: number;
+  options: QuestionOptions;
+  validation: ValidationRule;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReorderQuestionsRequest {
+  questionOrders: Array<{ id: string; order: number }>;
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {
