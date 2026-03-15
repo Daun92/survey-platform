@@ -11,6 +11,7 @@ import { SurveysModule } from './surveys/surveys.module';
 import { QuestionsModule } from './questions/questions.module';
 import { DistributionsModule } from './distributions/distributions.module';
 import { PublicModule } from './public/public.module';
+import { ResponsesModule } from './responses/responses.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PublicModule } from './public/public.module';
     QuestionsModule,
     DistributionsModule,
     PublicModule,
+    ResponsesModule,
   ],
 })
 export class AppModule {}

@@ -21,7 +21,7 @@ import {
 import { QuestionCard } from '@/components/survey-editor/question-card';
 import { QuestionForm } from '@/components/survey-editor/question-form';
 import { SurveyPreview } from '@/components/survey-editor/survey-preview';
-import { ArrowLeft, Plus, Eye, Send, Square } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, Send, Square, Share2, BarChart3 } from 'lucide-react';
 import { SurveyStatus } from '@survey/shared';
 import type { SurveyResponse, QuestionResponse, QuestionType, QuestionOptions, ValidationRule } from '@survey/shared';
 
@@ -370,6 +370,22 @@ export default function SurveyEditorPage() {
               <Send className="h-4 w-4 mr-1" />
               발행
             </Button>
+          )}
+          {(isActive || survey.status === 'closed') && (
+            <Link href={`/dashboard/surveys/${surveyId}/distribute`}>
+              <Button variant="outline" size="sm">
+                <Share2 className="h-4 w-4 mr-1" />
+                배포
+              </Button>
+            </Link>
+          )}
+          {(isActive || survey.status === 'closed') && (
+            <Link href={`/dashboard/surveys/${surveyId}/responses`}>
+              <Button variant="outline" size="sm">
+                <BarChart3 className="h-4 w-4 mr-1" />
+                응답
+              </Button>
+            </Link>
           )}
           {isActive && (
             <Button variant="secondary" size="sm" onClick={() => setCloseConfirm(true)}>
