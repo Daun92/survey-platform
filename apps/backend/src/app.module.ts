@@ -13,6 +13,9 @@ import { DistributionsModule } from './distributions/distributions.module';
 import { PublicModule } from './public/public.module';
 import { ResponsesModule } from './responses/responses.module';
 import { ReportModule } from './report/report.module';
+import { TemplatesModule } from './templates/templates.module';
+import { AiModule } from './ai/ai.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -33,6 +36,9 @@ import { ReportModule } from './report/report.module';
     PublicModule,
     ResponsesModule,
     ReportModule,
+    TemplatesModule,
+    AiModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

@@ -342,6 +342,87 @@ export interface SurveyReportResponse {
   aggregations: QuestionAggregation[];
 }
 
+// === Template Types ===
+
+export enum TemplateCategory {
+  EMPLOYEE_SATISFACTION = 'employee_satisfaction',
+  CUSTOMER_FEEDBACK = 'customer_feedback',
+  EVENT_FEEDBACK = 'event_feedback',
+  EDUCATION = 'education',
+  GENERAL = 'general',
+}
+
+export interface TemplateQuestion {
+  type: QuestionType;
+  title: string;
+  description: string | null;
+  required: boolean;
+  order: number;
+  options: QuestionOptions;
+  validation: ValidationRule;
+}
+
+export interface TemplateResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  category: TemplateCategory;
+  questions: TemplateQuestion[];
+  questionCount: number;
+  usageCount: number;
+  isSystem: boolean;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+}
+
+export interface CreateTemplateRequest {
+  title: string;
+  description?: string;
+  category: TemplateCategory;
+  surveyId?: string;
+  questions?: TemplateQuestion[];
+}
+
+export interface UseTemplateRequest {
+  projectId: string;
+  title?: string;
+}
+
+// === AI Generation Types ===
+
+export interface AiGenerateRequest {
+  topic: string;
+  purpose?: string;
+  targetAudience?: string;
+  questionCount?: number;
+  language?: string;
+}
+
+export interface AiGenerateResponse {
+  title: string;
+  description: string;
+  questions: TemplateQuestion[];
+}
+
+// === Dashboard Types ===
+
+export interface DashboardStats {
+  totalProjects: number;
+  totalSurveys: number;
+  activeSurveys: number;
+  totalResponses: number;
+  totalTemplates: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: 'survey_created' | 'survey_published' | 'response_received' | 'template_created';
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {
