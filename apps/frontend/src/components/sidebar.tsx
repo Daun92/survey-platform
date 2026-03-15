@@ -10,13 +10,17 @@ const navItems = [
   { href: '/dashboard/surveys', label: '설문 관리', icon: '📋' },
 ];
 
-export function Sidebar() {
+interface SidebarNavProps {
+  onNavigate?: () => void;
+}
+
+export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-screen w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
+    <>
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/dashboard" className="text-lg font-bold">
+        <Link href="/dashboard" className="text-lg font-bold" onClick={onNavigate}>
           Survey Platform
         </Link>
       </div>
@@ -26,9 +30,10 @@ export function Sidebar() {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={cn(
               'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-              pathname === item.href
+              pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                 : 'hover:bg-sidebar-accent/50',
             )}
@@ -51,6 +56,14 @@ export function Sidebar() {
           로그아웃
         </button>
       </div>
+    </>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <aside className="hidden md:flex h-screen w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
+      <SidebarNav />
     </aside>
   );
 }

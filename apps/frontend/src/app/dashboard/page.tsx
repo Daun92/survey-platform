@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ProjectResponse } from '@survey/shared';
 
 export default function DashboardPage() {
@@ -49,7 +50,17 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">로딩 중...</p>
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <Skeleton className="h-3 w-20" />
+              </div>
+            ))}
+          </div>
         ) : projects.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-muted-foreground">아직 프로젝트가 없습니다.</p>

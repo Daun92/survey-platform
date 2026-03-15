@@ -24,6 +24,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ProjectResponse } from '@survey/shared';
 
 export default function ProjectsPage() {
@@ -71,10 +73,11 @@ export default function ProjectsPage() {
       });
       setCreateOpen(false);
       setNewProject({ title: '', description: '' });
+      toast.success('프로젝트가 생성되었습니다');
       setLoading(true);
       await loadProjects();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '프로젝트 생성 실패');
+      toast.error(err instanceof Error ? err.message : '프로젝트 생성 실패');
     } finally {
       setCreating(false);
     }
@@ -100,10 +103,11 @@ export default function ProjectsPage() {
       });
       setEditOpen(false);
       setEditTarget(null);
+      toast.success('프로젝트가 수정되었습니다');
       setLoading(true);
       await loadProjects();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '프로젝트 수정 실패');
+      toast.error(err instanceof Error ? err.message : '프로젝트 수정 실패');
     } finally {
       setSaving(false);
     }
@@ -114,10 +118,11 @@ export default function ProjectsPage() {
     try {
       await api(`/projects/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteTarget(null);
+      toast.success('프로젝트가 삭제되었습니다');
       setLoading(true);
       await loadProjects();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '프로젝트 삭제 실패');
+      toast.error(err instanceof Error ? err.message : '프로젝트 삭제 실패');
     }
   };
 
@@ -170,7 +175,18 @@ export default function ProjectsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">로딩 중...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="rounded-lg border bg-card p-5 space-y-3">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-3 w-full" />
+              <div className="flex justify-between">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : projects.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground mb-3">프로젝트가 없습니다.</p>

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { QuestionPreview } from '@/components/survey-preview/question-preview';
 import { ArrowLeft } from 'lucide-react';
 import type { SurveyResponse, QuestionResponse } from '@survey/shared';
@@ -37,8 +38,21 @@ export default function SurveyPreviewPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">로딩 중...</p>
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-9" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="rounded-lg border bg-card p-6 space-y-2">
+          <Skeleton className="h-7 w-1/2" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-lg border bg-card p-6 space-y-3">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ))}
       </div>
     );
   }

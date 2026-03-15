@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ProjectResponse, SurveyResponse, SurveyStatus } from '@survey/shared';
 
 const STATUS_LABELS: Record<SurveyStatus, string> = {
@@ -85,10 +87,11 @@ export default function SurveysPage() {
       });
       setDialogOpen(false);
       setNewSurvey({ projectId: '', title: '', description: '' });
+      toast.success('설문이 생성되었습니다');
       setLoading(true);
       await loadData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '설문 생성 실패');
+      toast.error(err instanceof Error ? err.message : '설문 생성 실패');
     } finally {
       setCreating(false);
     }
@@ -161,7 +164,25 @@ export default function SurveysPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">로딩 중...</p>
+        <div className="space-y-6">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-6 w-40" />
+              {[...Array(3)].map((_, j) => (
+                <div key={j} className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                    </div>
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       ) : data.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground">프로젝트가 없습니다. 먼저 프로젝트를 생성하세요.</p>
