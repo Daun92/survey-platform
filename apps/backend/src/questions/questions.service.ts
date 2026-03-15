@@ -119,6 +119,34 @@ export class QuestionsService {
     return this.findBySurvey(surveyId);
   }
 
+  async duplicate(surveyId: string, id: string): Promise<Question> {
+    await this.ensureDraft(surveyId);
+    const original = await this.findById(surveyId, id);
+
+    await this.questionsRepo
+      .createQueryBuilder()
+      .update(Question)
+      .set({ order: () => '"order" + 1' })
+      .where('surveyId = :surveyId AND "order" > :order', {
+        surveyId,
+        order: original.order,
+      })
+      .execute();
+
+    const duplicate = this.questionsRepo.create({
+      surveyId,
+      type: original.type,
+      title: `${original.title} (복사)`,
+      description: original.description,
+      required: original.required,
+      order: original.order + 1,
+      options: JSON.parse(JSON.stringify(original.options)),
+      validation: JSON.parse(JSON.stringify(original.validation)),
+    });
+
+    return this.questionsRepo.save(duplicate);
+  }
+
   private async getSurvey(surveyId: string): Promise<Survey> {
     const survey = await this.surveysRepo.findOne({ where: { id: surveyId } });
     if (!survey) throw new NotFoundException('설문을 찾을 수 없습니다.');

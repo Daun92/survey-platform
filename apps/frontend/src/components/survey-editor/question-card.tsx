@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronUp, ChevronDown, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { ChevronUp, ChevronDown, Pencil, Trash2, GripVertical, Copy } from 'lucide-react';
 import { QUESTION_TYPE_LABELS } from './question-form';
 import type { QuestionResponse } from '@survey/shared';
 
@@ -13,6 +13,7 @@ interface QuestionCardProps {
   isEditable: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
@@ -24,6 +25,7 @@ export function QuestionCard({
   isEditable,
   onEdit,
   onDelete,
+  onDuplicate,
   onMoveUp,
   onMoveDown,
 }: QuestionCardProps) {
@@ -73,6 +75,9 @@ export function QuestionCard({
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
             <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate}>
+            <Copy className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"

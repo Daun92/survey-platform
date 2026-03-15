@@ -195,6 +195,153 @@ export interface ReorderQuestionsRequest {
   questionOrders: Array<{ id: string; order: number }>;
 }
 
+// === Distribution Types ===
+
+export enum DistributionChannel {
+  LINK = 'link',
+  QR = 'qr',
+  EMAIL = 'email',
+}
+
+export interface DistributionConfig {
+  allowDuplicate: boolean;
+  maxResponses: number | null;
+  welcomeMessage: string | null;
+  completionMessage: string | null;
+}
+
+export interface DistributionResponse {
+  id: string;
+  surveyId: string;
+  channel: DistributionChannel;
+  token: string;
+  config: DistributionConfig;
+  isActive: boolean;
+  expiresAt: string | null;
+  responseCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDistributionRequest {
+  channel?: DistributionChannel;
+  config?: Partial<DistributionConfig>;
+  expiresAt?: string;
+}
+
+export interface UpdateDistributionRequest {
+  config?: Partial<DistributionConfig>;
+  isActive?: boolean;
+  expiresAt?: string | null;
+}
+
+// === Response Types ===
+
+export enum ResponseStatus {
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+}
+
+export interface AnswerValue {
+  questionId: string;
+  value: string | string[] | number | Record<string, string> | null;
+}
+
+export interface RespondentInfo {
+  ipAddress: string;
+  userAgent: string;
+}
+
+export interface SubmitResponseRequest {
+  answers: AnswerValue[];
+}
+
+export interface SurveyResponseDetail {
+  id: string;
+  surveyId: string;
+  distributionId: string | null;
+  status: ResponseStatus;
+  answers: AnswerValue[];
+  respondentInfo: RespondentInfo;
+  submittedAt: string | null;
+  createdAt: string;
+}
+
+export interface PublicSurveyData {
+  survey: {
+    id: string;
+    title: string;
+    description: string | null;
+  };
+  questions: QuestionResponse[];
+  config: DistributionConfig;
+}
+
+// === Report Types ===
+
+export enum ChartType {
+  BAR = 'bar',
+  PIE = 'pie',
+  LINE = 'line',
+  HEATMAP = 'heatmap',
+  STACKED_BAR = 'stacked-bar',
+}
+
+export interface ChoiceAggregation {
+  type: 'choice';
+  options: { label: string; count: number; percentage: number }[];
+}
+
+export interface TextAggregation {
+  type: 'text';
+  responses: string[];
+  totalCount: number;
+}
+
+export interface NumericAggregation {
+  type: 'numeric';
+  average: number;
+  median: number;
+  min: number;
+  max: number;
+  distribution: { value: number; count: number }[];
+}
+
+export interface MatrixAggregation {
+  type: 'matrix';
+  rows: {
+    label: string;
+    columns: { label: string; count: number; percentage: number }[];
+  }[];
+}
+
+export interface RankingAggregation {
+  type: 'ranking';
+  items: { label: string; averageRank: number; rankDistribution: number[] }[];
+}
+
+export type AggregationData =
+  | ChoiceAggregation
+  | TextAggregation
+  | NumericAggregation
+  | MatrixAggregation
+  | RankingAggregation;
+
+export interface QuestionAggregation {
+  questionId: string;
+  questionTitle: string;
+  questionType: QuestionType;
+  totalResponses: number;
+  data: AggregationData;
+}
+
+export interface SurveyReportResponse {
+  surveyId: string;
+  surveyTitle: string;
+  totalResponses: number;
+  aggregations: QuestionAggregation[];
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {

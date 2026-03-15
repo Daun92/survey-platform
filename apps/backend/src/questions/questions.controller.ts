@@ -94,4 +94,12 @@ export class QuestionsController {
   ) {
     return this.questionsService.bulkCreate(surveyId, dto.questions);
   }
+
+  @Post(':id/duplicate')
+  duplicate(
+    @Param('surveyId', ParseUUIDPipe) surveyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.questionsService.duplicate(surveyId, id);
+  }
 }
