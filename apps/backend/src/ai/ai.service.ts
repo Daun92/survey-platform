@@ -3,6 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { QuestionType } from '@survey/shared';
 import type { AiGenerateResponse, TemplateQuestion } from '@survey/shared';
 import { GenerateSurveyDto } from './dto/generate-survey.dto';
+import { ChatMessageDto } from './dto/chat-message.dto';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface StreamEvent {
+  type: 'text' | 'questions' | 'error';
+  data: string;
+}
 
 @Injectable()
 export class AiService {
@@ -11,6 +19,217 @@ export class AiService {
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
+  }
+
+  async *chatStream(dto: ChatMessageDto): AsyncGenerator<StreamEvent> {
+    if (!this.apiKey) {
+      // Mock streaming response when no API key
+      yield* this.mockChatStream(dto);
+      return;
+    }
+
+    try {
+      yield* this.claudeChatStream(dto);
+    } catch (err) {
+      this.logger.warn('AI chat stream failed, falling back to mock', err);
+      yield* this.mockChatStream(dto);
+    }
+  }
+
+  private async *claudeChatStream(dto: ChatMessageDto): AsyncGenerator<StreamEvent> {
+    const existingQuestionsContext = dto.existingQuestions?.length
+      ? `\n\n현재 설문에 이미 포함된 질문 목록:\n${dto.existingQuestions.map((q, i) => `${i + 1}. [${q.type}] ${q.title}`).join('\n')}\n위 질문들과 중복되지 않는 새로운 질문을 생성해주세요.`
+      : '';
+
+    const systemPrompt = `당신은 설문조사 설계 전문가 AI 어시스턴트입니다.
+사용자와 대화하며 설문 질문을 함께 설계합니다.
+
+규칙:
+1. 한국어로 응답하세요.
+2. 사용자의 요청에 따라 적절한 설문 질문을 제안하세요.
+3. 질문을 생성할 때는 반드시 아래 형식으로 JSON 블록을 포함하세요:
+
+<<<QUESTIONS>>>
+[
+  {
+    "type": "radio|checkbox|short_text|long_text|dropdown|linear_scale|date|ranking",
+    "title": "질문 텍스트",
+    "description": null,
+    "required": true,
+    "order": 0,
+    "options": {},
+    "validation": { "required": true }
+  }
+]
+<<<END_QUESTIONS>>>
+
+radio/checkbox/dropdown 타입에는 choices를 포함하세요:
+"options": { "choices": [{ "id": "opt1", "label": "선택지 1", "value": "opt1", "order": 0 }] }
+
+linear_scale 타입에는:
+"options": { "linearScale": { "min": 1, "max": 5, "minLabel": "낮음", "maxLabel": "높음", "step": 1 } }
+
+4. 일반 대화 텍스트와 질문 JSON 블록을 함께 포함할 수 있습니다.
+5. 파일이 첨부된 경우, 파일 내용을 분석하여 관련 질문을 제안하세요.${existingQuestionsContext}`;
+
+    // Build messages array
+    const messages: Array<{ role: 'user' | 'assistant'; content: unknown }> = [];
+
+    // Add conversation history
+    if (dto.conversationHistory) {
+      for (const msg of dto.conversationHistory) {
+        messages.push({ role: msg.role, content: msg.content });
+      }
+    }
+
+    // Build current message content (potentially multimodal)
+    const contentParts: unknown[] = [];
+
+    // Add file attachments as base64 images
+    if (dto.attachmentIds?.length) {
+      for (const attachmentId of dto.attachmentIds) {
+        const filePath = path.join(process.cwd(), 'uploads/ai-temp', attachmentId);
+        if (fs.existsSync(filePath)) {
+          const fileBuffer = fs.readFileSync(filePath);
+          const base64 = fileBuffer.toString('base64');
+
+          // Detect mime type from extension or default to image/png
+          const ext = path.extname(attachmentId).toLowerCase();
+          let mediaType = 'image/png';
+          if (ext === '.jpg' || ext === '.jpeg') mediaType = 'image/jpeg';
+          else if (ext === '.gif') mediaType = 'image/gif';
+          else if (ext === '.webp') mediaType = 'image/webp';
+          else if (ext === '.pdf') mediaType = 'application/pdf';
+
+          if (mediaType === 'application/pdf') {
+            contentParts.push({
+              type: 'document',
+              source: { type: 'base64', media_type: mediaType, data: base64 },
+            });
+          } else {
+            contentParts.push({
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64 },
+            });
+          }
+        }
+      }
+    }
+
+    contentParts.push({ type: 'text', text: dto.message });
+    messages.push({ role: 'user', content: contentParts });
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey!,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            const text = parsed.delta.text;
+            fullText += text;
+
+            // Check for questions block in accumulated text
+            const questionsMatch = fullText.match(/<<<QUESTIONS>>>([\s\S]*?)<<<END_QUESTIONS>>>/);
+            if (questionsMatch) {
+              // Emit questions event
+              try {
+                const questions = JSON.parse(questionsMatch[1].trim());
+                yield { type: 'questions', data: JSON.stringify(questions) };
+              } catch {
+                // JSON parse failed, emit as text
+              }
+              // Remove the questions block from what we send as text
+              fullText = fullText.replace(/<<<QUESTIONS>>>[\s\S]*?<<<END_QUESTIONS>>>/, '');
+            }
+
+            // Only emit text that's not part of a questions block
+            if (!text.includes('<<<QUESTIONS>>>') && !text.includes('<<<END_QUESTIONS>>>') && !fullText.includes('<<<QUESTIONS>>>')) {
+              yield { type: 'text', data: text };
+            }
+          }
+        } catch {
+          // Skip unparseable lines
+        }
+      }
+    }
+  }
+
+  private async *mockChatStream(dto: ChatMessageDto): AsyncGenerator<StreamEvent> {
+    const response = `설문 질문을 생성해드리겠습니다. "${dto.message}"에 대한 질문입니다.`;
+    const words = response.split('');
+
+    for (const char of words) {
+      yield { type: 'text', data: char };
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+
+    // Generate mock questions
+    const questions: TemplateQuestion[] = [
+      {
+        type: QuestionType.RADIO,
+        title: `${dto.message}에 대한 전반적인 만족도를 선택해주세요.`,
+        description: null,
+        required: true,
+        order: 0,
+        options: {
+          choices: [
+            { id: 'c1', label: '매우 만족', value: 'very_satisfied', order: 0 },
+            { id: 'c2', label: '만족', value: 'satisfied', order: 1 },
+            { id: 'c3', label: '보통', value: 'neutral', order: 2 },
+            { id: 'c4', label: '불만족', value: 'dissatisfied', order: 3 },
+          ],
+        },
+        validation: { required: true },
+      },
+      {
+        type: QuestionType.LONG_TEXT,
+        title: '추가 의견이 있으시면 자유롭게 작성해주세요.',
+        description: null,
+        required: false,
+        order: 1,
+        options: { placeholder: '의견을 입력하세요', maxRows: 5 },
+        validation: { required: false },
+      },
+    ];
+
+    yield { type: 'questions', data: JSON.stringify(questions) };
   }
 
   async generateSurvey(dto: GenerateSurveyDto): Promise<AiGenerateResponse> {
@@ -89,7 +308,6 @@ Make questions relevant and professional.`;
     if (!jsonMatch) throw new Error('Failed to parse AI response');
 
     const parsed = JSON.parse(jsonMatch[0]) as AiGenerateResponse;
-    // Ensure order fields are set
     parsed.questions = parsed.questions.map((q, i) => ({
       ...q,
       order: i,

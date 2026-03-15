@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import type {
   SurveyResponse as SurveyResponseType,
   QuestionResponse,
@@ -130,19 +130,9 @@ export default function ResponsesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={`/dashboard/surveys/${surveyId}/edit`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">응답 관리</h1>
-          <p className="text-muted-foreground">
-            {survey?.title} — 총 {meta.total}건
-          </p>
-        </div>
+      {/* Summary */}
+      <div className="text-sm text-muted-foreground">
+        총 {meta.total}건의 응답
       </div>
 
       {/* Response List */}
@@ -242,7 +232,7 @@ export default function ResponsesPage() {
         open={!!selectedResponse}
         onOpenChange={(open) => !open && setSelectedResponse(null)}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0" aria-describedby={undefined}>
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle>응답 상세</DialogTitle>
             <p className="text-sm text-muted-foreground">

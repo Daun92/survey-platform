@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Sparkles, Loader2, Trash2, Save, GripVertical } from 'lucide-react';
+import { toast } from 'sonner';
 import type {
   AiGenerateResponse,
   TemplateQuestion,
@@ -69,12 +70,12 @@ export default function AiGeneratePage() {
     try {
       const data = await api<AiGenerateResponse>('/ai/generate-survey', {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           topic: topic.trim(),
           purpose: purpose.trim() || undefined,
           targetAudience: targetAudience.trim() || undefined,
           questionCount,
-        }),
+        },
       });
       setResult(data);
       setEditedTitle(data.title);
@@ -115,11 +116,11 @@ export default function AiGeneratePage() {
       // Create survey
       const survey = await api<{ id: string }>('/surveys', {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           projectId: selectedProjectId,
           title: editedTitle,
           description: editedDescription,
-        }),
+        },
       });
 
       // Create questions
@@ -135,18 +136,31 @@ export default function AiGeneratePage() {
 
       await api(`/surveys/${survey.id}/questions/bulk`, {
         method: 'POST',
-        body: JSON.stringify(questionsPayload),
+        body: questionsPayload,
       });
 
       router.push(`/dashboard/surveys/${survey.id}/edit`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '저장 실패');
+      toast.error(err instanceof Error ? err.message : '저장 실패');
       setSaving(false);
     }
   };
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Migration Banner */}
+      <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4 text-sm flex items-start gap-3">
+        <Sparkles className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+        <div>
+          <p className="font-medium text-blue-900 dark:text-blue-100">
+            설문 편집 화면에서 AI 어시스턴트를 바로 사용할 수 있습니다
+          </p>
+          <p className="text-blue-700 dark:text-blue-300 mt-1">
+            설문 편집 페이지에서 &quot;AI 어시스턴트&quot; 버튼을 클릭하면 대화형으로 질문을 생성하고, PDF/이미지를 첨부하여 분석할 수 있습니다.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -334,7 +348,7 @@ export default function AiGeneratePage() {
 
       {/* Save Dialog */}
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>설문으로 저장</DialogTitle>
           </DialogHeader>
