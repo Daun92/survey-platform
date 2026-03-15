@@ -12,6 +12,8 @@ import { SurveyStatus } from '@survey/shared';
 import { Project } from './project.entity';
 import { User } from './user.entity';
 import { Question } from './question.entity';
+import { Distribution } from './distribution.entity';
+import { SurveyResponse } from './response.entity';
 
 @Entity('surveys')
 export class Survey {
@@ -49,6 +51,12 @@ export class Survey {
 
   @OneToMany(() => Question, (question) => question.survey)
   questions: Question[];
+
+  @OneToMany(() => Distribution, (distribution) => distribution.survey)
+  distributions: Distribution[];
+
+  @OneToMany(() => SurveyResponse, (response) => response.survey)
+  responses: SurveyResponse[];
 
   @CreateDateColumn()
   createdAt: Date;

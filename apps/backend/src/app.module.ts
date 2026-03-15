@@ -9,6 +9,8 @@ import { DepartmentsModule } from './departments/departments.module';
 import { ProjectsModule } from './projects/projects.module';
 import { SurveysModule } from './surveys/surveys.module';
 import { QuestionsModule } from './questions/questions.module';
+import { DistributionsModule } from './distributions/distributions.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { QuestionsModule } from './questions/questions.module';
     ProjectsModule,
     SurveysModule,
     QuestionsModule,
+    DistributionsModule,
+    PublicModule,
   ],
 })
 export class AppModule {}
