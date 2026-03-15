@@ -17,6 +17,7 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeft,
+  Sparkles,
 } from 'lucide-react';
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { href: '/dashboard/projects', label: '프로젝트', icon: FolderOpen },
   { href: '/dashboard/surveys', label: '설문 관리', icon: ClipboardList },
   { href: '/dashboard/templates', label: '템플릿', icon: FileText },
+  { href: '/dashboard/ai', label: 'AI 설문 생성', icon: Sparkles },
   { href: '/dashboard/reports', label: '리포트', icon: BarChart3 },
   { href: '/dashboard/settings', label: '설정', icon: Settings },
 ];

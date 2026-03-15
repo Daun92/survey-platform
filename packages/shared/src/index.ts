@@ -389,6 +389,22 @@ export interface UseTemplateRequest {
   title?: string;
 }
 
+// === AI Generation Types ===
+
+export interface AiGenerateRequest {
+  topic: string;
+  purpose?: string;
+  targetAudience?: string;
+  questionCount?: number;
+  language?: string;
+}
+
+export interface AiGenerateResponse {
+  title: string;
+  description: string;
+  questions: TemplateQuestion[];
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {
