@@ -4,7 +4,9 @@ import { Repository } from 'typeorm';
 import { Distribution } from '../entities/distribution.entity';
 import { Survey } from '../entities/survey.entity';
 import { Question } from '../entities/question.entity';
-import { SurveyStatus, PublicSurveyData } from '@survey/shared';
+import { SurveyResponse } from '../entities/response.entity';
+import { SurveyStatus, ResponseStatus, PublicSurveyData } from '@survey/shared';
+import { SubmitResponseDto } from './dto/submit-response.dto';
 
 @Injectable()
 export class PublicService {
@@ -15,9 +17,11 @@ export class PublicService {
     private readonly surveysRepo: Repository<Survey>,
     @InjectRepository(Question)
     private readonly questionsRepo: Repository<Question>,
+    @InjectRepository(SurveyResponse)
+    private readonly responsesRepo: Repository<SurveyResponse>,
   ) {}
 
-  async getSurveyByToken(token: string): Promise<PublicSurveyData> {
+  private async validateDistribution(token: string): Promise<{ distribution: Distribution; survey: Survey }> {
     const distribution = await this.distributionsRepo.findOne({
       where: { token },
     });
@@ -46,6 +50,12 @@ export class PublicService {
       throw new BadRequestException('현재 응답을 받지 않는 설문입니다.');
     }
 
+    return { distribution, survey };
+  }
+
+  async getSurveyByToken(token: string): Promise<PublicSurveyData> {
+    const { distribution, survey } = await this.validateDistribution(token);
+
     const questions = await this.questionsRepo.find({
       where: { surveyId: survey.id },
       order: { order: 'ASC' },
@@ -72,5 +82,69 @@ export class PublicService {
       })),
       config: distribution.config,
     };
+  }
+
+  async submitResponse(
+    token: string,
+    dto: SubmitResponseDto,
+    ip: string,
+    userAgent: string,
+  ): Promise<{ id: string }> {
+    const { distribution, survey } = await this.validateDistribution(token);
+
+    // Duplicate IP check
+    if (!distribution.config.allowDuplicate) {
+      const existing = await this.responsesRepo
+        .createQueryBuilder('r')
+        .where('r.distributionId = :did', { did: distribution.id })
+        .andWhere("r.\"respondentInfo\"->>'ipAddress' = :ip", { ip })
+        .getOne();
+
+      if (existing) {
+        throw new BadRequestException('이미 응답을 제출하셨습니다.');
+      }
+    }
+
+    // Max responses check
+    if (distribution.config.maxResponses !== null && distribution.config.maxResponses !== undefined) {
+      const count = await this.responsesRepo.count({
+        where: { distributionId: distribution.id },
+      });
+      if (count >= distribution.config.maxResponses) {
+        throw new BadRequestException('최대 응답 수에 도달하여 더 이상 응답을 받을 수 없습니다.');
+      }
+    }
+
+    // Required question validation
+    const questions = await this.questionsRepo.find({
+      where: { surveyId: survey.id },
+    });
+    const answeredMap = new Map(dto.answers.map((a) => [a.questionId, a.value]));
+
+    for (const question of questions) {
+      if (!question.required) continue;
+      const val = answeredMap.get(question.id);
+      if (
+        val === null ||
+        val === undefined ||
+        val === '' ||
+        (Array.isArray(val) && val.length === 0)
+      ) {
+        throw new BadRequestException(`필수 질문에 답변해주세요: ${question.title}`);
+      }
+    }
+
+    // Save response
+    const response = this.responsesRepo.create({
+      surveyId: survey.id,
+      distributionId: distribution.id,
+      status: ResponseStatus.COMPLETED,
+      answers: dto.answers,
+      respondentInfo: { ipAddress: ip, userAgent },
+      submittedAt: new Date(),
+    });
+
+    const saved = await this.responsesRepo.save(response);
+    return { id: saved.id };
   }
 }
