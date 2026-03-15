@@ -13,6 +13,7 @@ import { DistributionsModule } from './distributions/distributions.module';
 import { PublicModule } from './public/public.module';
 import { ResponsesModule } from './responses/responses.module';
 import { ReportModule } from './report/report.module';
+import { TemplatesModule } from './templates/templates.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ReportModule } from './report/report.module';
     PublicModule,
     ResponsesModule,
     ReportModule,
+    TemplatesModule,
   ],
 })
 export class AppModule {}
