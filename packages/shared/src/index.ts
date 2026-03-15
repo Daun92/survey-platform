@@ -277,6 +277,71 @@ export interface PublicSurveyData {
   config: DistributionConfig;
 }
 
+// === Report Types ===
+
+export enum ChartType {
+  BAR = 'bar',
+  PIE = 'pie',
+  LINE = 'line',
+  HEATMAP = 'heatmap',
+  STACKED_BAR = 'stacked-bar',
+}
+
+export interface ChoiceAggregation {
+  type: 'choice';
+  options: { label: string; count: number; percentage: number }[];
+}
+
+export interface TextAggregation {
+  type: 'text';
+  responses: string[];
+  totalCount: number;
+}
+
+export interface NumericAggregation {
+  type: 'numeric';
+  average: number;
+  median: number;
+  min: number;
+  max: number;
+  distribution: { value: number; count: number }[];
+}
+
+export interface MatrixAggregation {
+  type: 'matrix';
+  rows: {
+    label: string;
+    columns: { label: string; count: number; percentage: number }[];
+  }[];
+}
+
+export interface RankingAggregation {
+  type: 'ranking';
+  items: { label: string; averageRank: number; rankDistribution: number[] }[];
+}
+
+export type AggregationData =
+  | ChoiceAggregation
+  | TextAggregation
+  | NumericAggregation
+  | MatrixAggregation
+  | RankingAggregation;
+
+export interface QuestionAggregation {
+  questionId: string;
+  questionTitle: string;
+  questionType: QuestionType;
+  totalResponses: number;
+  data: AggregationData;
+}
+
+export interface SurveyReportResponse {
+  surveyId: string;
+  surveyTitle: string;
+  totalResponses: number;
+  aggregations: QuestionAggregation[];
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {

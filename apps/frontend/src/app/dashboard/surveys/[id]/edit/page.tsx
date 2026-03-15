@@ -21,7 +21,7 @@ import {
 import { QuestionCard } from '@/components/survey-editor/question-card';
 import { QuestionForm } from '@/components/survey-editor/question-form';
 import { SurveyPreview } from '@/components/survey-editor/survey-preview';
-import { ArrowLeft, Plus, Eye, Send, Square, Share2, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, Send, Square, Share2, BarChart3, PieChart } from 'lucide-react';
 import { SurveyStatus } from '@survey/shared';
 import type { SurveyResponse, QuestionResponse, QuestionType, QuestionOptions, ValidationRule } from '@survey/shared';
 
@@ -384,6 +384,14 @@ export default function SurveyEditorPage() {
               <Button variant="outline" size="sm">
                 <BarChart3 className="h-4 w-4 mr-1" />
                 응답
+              </Button>
+            </Link>
+          )}
+          {(isActive || survey.status === 'closed') && (
+            <Link href={`/dashboard/surveys/${surveyId}/report`}>
+              <Button variant="outline" size="sm">
+                <PieChart className="h-4 w-4 mr-1" />
+                리포트
               </Button>
             </Link>
           )}
