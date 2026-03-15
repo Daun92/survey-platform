@@ -76,15 +76,19 @@ Claude가 선택지를 제시하고 사용자가 선택한 경우, 워크로그 
 - 각 에이전트는 세션 시작 시 `agents/status.md`에 자신의 작업을 등록합니다
 - 에이전트 ID 형식: `agent-{역할}-{번호}` (예: `agent-frontend-1`, `agent-backend-1`)
 
-### 작업 영역 분리 (Zone Ownership)
-동시 작업 시 각 에이전트는 **배타적 작업 영역**을 가집니다:
+### 역할 배분 (3개 롤)
+상세 역할 정의, 수정 가능 범위, 프롬프트 템플릿은 `agents/roles.md` 참조
 
-| 역할 | 담당 영역 | 수정 가능 범위 |
-|------|-----------|---------------|
-| frontend | `apps/frontend/` | 프론트엔드 전체 |
-| backend | `apps/backend/` | 백엔드 전체 |
-| shared | `packages/shared/` | 공유 타입/유틸 |
-| infra | `docker/`, 루트 설정 | 인프라/설정 |
+| 역할 | 에이전트 ID | 담당 영역 | 수정 가능 범위 |
+|------|-----------|-----------|---------------|
+| infra | `agent-infra-1` | 루트 설정, `docker/`, `packages/shared/` | 모노레포 설정, 공유 타입, 인프라 |
+| backend | `agent-backend-1` | `apps/backend/` | 백엔드 전체 + shared 새 파일 추가 |
+| frontend | `agent-frontend-1` | `apps/frontend/` | 프론트엔드 전체 + shared 새 파일 추가 |
+
+### 실행 패턴
+- **순차**: infra가 기반 세팅 & 공유 타입 정의 → 커밋 & 푸시
+- **병렬**: frontend + backend가 각자 영역에서 동시 개발
+- 참고: `agents/roles.md`에 Phase별 실행 순서 및 프롬프트 템플릿 있음
 
 ### 공유 영역 수정 규칙
 다음 파일/디렉토리는 **공유 영역**이므로 수정 전 `agents/status.md`를 확인합니다:

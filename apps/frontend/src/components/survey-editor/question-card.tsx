@@ -117,19 +117,19 @@ export function QuestionCard({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>복제</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
                 <Pencil className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>수정</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>복제</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Sidebar, SidebarNav } from '@/components/sidebar';
 import { Header } from '@/components/header';
+import { FAB } from '@/components/fab';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -51,6 +52,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <FAB />
     </div>
   );
 }

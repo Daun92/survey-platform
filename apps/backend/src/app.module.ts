@@ -9,6 +9,13 @@ import { DepartmentsModule } from './departments/departments.module';
 import { ProjectsModule } from './projects/projects.module';
 import { SurveysModule } from './surveys/surveys.module';
 import { QuestionsModule } from './questions/questions.module';
+import { DistributionsModule } from './distributions/distributions.module';
+import { PublicModule } from './public/public.module';
+import { ResponsesModule } from './responses/responses.module';
+import { ReportModule } from './report/report.module';
+import { TemplatesModule } from './templates/templates.module';
+import { AiModule } from './ai/ai.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -25,6 +32,13 @@ import { QuestionsModule } from './questions/questions.module';
     ProjectsModule,
     SurveysModule,
     QuestionsModule,
+    DistributionsModule,
+    PublicModule,
+    ResponsesModule,
+    ReportModule,
+    TemplatesModule,
+    AiModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

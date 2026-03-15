@@ -88,6 +88,16 @@ export class SurveysController {
     return this.surveysService.updateStatus(id, dto.status);
   }
 
+  @Patch(':id/publish')
+  publish(@Param('id', ParseUUIDPipe) id: string) {
+    return this.surveysService.publish(id);
+  }
+
+  @Patch(':id/close')
+  close(@Param('id', ParseUUIDPipe) id: string) {
+    return this.surveysService.close(id);
+  }
+
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.surveysService.remove(id);

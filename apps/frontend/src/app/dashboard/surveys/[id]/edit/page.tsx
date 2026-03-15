@@ -18,20 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { QuestionCard } from '@/components/survey-editor/question-card';
 import { QuestionForm } from '@/components/survey-editor/question-form';
-import { TargetManager } from '@/components/survey-editor/target-manager';
-import { ArrowLeft, Plus, Eye, ChevronDown, Users, ListChecks } from 'lucide-react';
+import { SurveyPreview } from '@/components/survey-editor/survey-preview';
+import { ArrowLeft, Plus, Eye, Send, Square, Share2, BarChart3, PieChart } from 'lucide-react';
 import { toast } from 'sonner';
 import { SurveyStatus } from '@survey/shared';
 import type { SurveyResponse, QuestionResponse, QuestionType, QuestionOptions, ValidationRule } from '@survey/shared';
@@ -41,27 +35,6 @@ const STATUS_LABELS: Record<SurveyStatus, string> = {
   [SurveyStatus.ACTIVE]: '진행 중',
   [SurveyStatus.CLOSED]: '마감',
   [SurveyStatus.ARCHIVED]: '보관',
-};
-
-const STATUS_VARIANTS: Record<SurveyStatus, 'secondary' | 'default' | 'outline' | 'destructive'> = {
-  [SurveyStatus.DRAFT]: 'secondary',
-  [SurveyStatus.ACTIVE]: 'default',
-  [SurveyStatus.CLOSED]: 'outline',
-  [SurveyStatus.ARCHIVED]: 'destructive',
-};
-
-const STATUS_FLOW: Record<SurveyStatus, SurveyStatus | null> = {
-  [SurveyStatus.DRAFT]: SurveyStatus.ACTIVE,
-  [SurveyStatus.ACTIVE]: SurveyStatus.CLOSED,
-  [SurveyStatus.CLOSED]: SurveyStatus.ARCHIVED,
-  [SurveyStatus.ARCHIVED]: null,
-};
-
-const STATUS_ACTION_LABELS: Record<SurveyStatus, string> = {
-  [SurveyStatus.DRAFT]: '발행하기',
-  [SurveyStatus.ACTIVE]: '마감하기',
-  [SurveyStatus.CLOSED]: '보관하기',
-  [SurveyStatus.ARCHIVED]: '',
 };
 
 export default function SurveyEditorPage() {
@@ -79,10 +52,8 @@ export default function SurveyEditorPage() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<QuestionResponse | null>(null);
 
-  // Status change
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<SurveyStatus | null>(null);
-  const [changingStatus, setChangingStatus] = useState(false);
+  // Preview
+  const [showPreview, setShowPreview] = useState(false);
 
   // Inline editing
   const [editingTitle, setEditingTitle] = useState(false);
@@ -90,9 +61,11 @@ export default function SurveyEditorPage() {
   const [titleDraft, setTitleDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
-  const [activeTab, setActiveTab] = useState<'questions' | 'targets'>('questions');
+  // Publish/Close confirmation
+  const [publishConfirm, setPublishConfirm] = useState(false);
+  const [closeConfirm, setCloseConfirm] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -100,6 +73,7 @@ export default function SurveyEditorPage() {
   );
 
   const isDraft = survey?.status === SurveyStatus.DRAFT;
+  const isActive = survey?.status === SurveyStatus.ACTIVE;
 
   const loadData = useCallback(async () => {
     try {
@@ -119,19 +93,12 @@ export default function SurveyEditorPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Focus inputs when entering edit mode
-  useEffect(() => {
-    if (editingTitle) titleInputRef.current?.focus();
-  }, [editingTitle]);
-  useEffect(() => {
-    if (editingDescription) descriptionInputRef.current?.focus();
-  }, [editingDescription]);
-
-  // --- Inline editing handlers ---
-  const startEditTitle = () => {
+  // Inline title editing
+  const startEditingTitle = () => {
     if (!isDraft || !survey) return;
     setTitleDraft(survey.title);
     setEditingTitle(true);
+    setTimeout(() => titleInputRef.current?.focus(), 0);
   };
 
   const saveTitle = async () => {
@@ -156,10 +123,12 @@ export default function SurveyEditorPage() {
     setEditingTitle(false);
   };
 
-  const startEditDescription = () => {
+  // Inline description editing
+  const startEditingDescription = () => {
     if (!isDraft || !survey) return;
     setDescriptionDraft(survey.description ?? '');
     setEditingDescription(true);
+    setTimeout(() => descriptionRef.current?.focus(), 0);
   };
 
   const saveDescription = async () => {
@@ -167,15 +136,15 @@ export default function SurveyEditorPage() {
       setEditingDescription(false);
       return;
     }
-    const newDesc = descriptionDraft.trim() || null;
-    if (newDesc === (survey.description ?? null)) {
+    const newDesc = descriptionDraft.trim();
+    if (newDesc === (survey.description ?? '')) {
       setEditingDescription(false);
       return;
     }
     try {
       const updated = await api<SurveyResponse>(`/surveys/${surveyId}`, {
         method: 'PUT',
-        body: { description: newDesc ?? undefined },
+        body: { description: newDesc || '' },
       });
       setSurvey(updated);
       toast.success('설명이 저장되었습니다');
@@ -185,37 +154,36 @@ export default function SurveyEditorPage() {
     setEditingDescription(false);
   };
 
-  // --- Status change handlers ---
-  const handleStatusChange = (newStatus: SurveyStatus) => {
-    if (newStatus === SurveyStatus.ACTIVE) {
-      setPendingStatus(newStatus);
-      setStatusDialogOpen(true);
-    } else {
-      confirmStatusChange(newStatus);
-    }
-  };
-
-  const confirmStatusChange = async (status?: SurveyStatus) => {
-    const targetStatus = status ?? pendingStatus;
-    if (!targetStatus) return;
-    setChangingStatus(true);
+  // Publish / Close
+  const handlePublish = async () => {
     try {
-      const updated = await api<SurveyResponse>(`/surveys/${surveyId}/status`, {
+      const updated = await api<SurveyResponse>(`/surveys/${surveyId}/publish`, {
         method: 'PATCH',
-        body: { status: targetStatus },
       });
       setSurvey(updated);
-      toast.success('상태가 변경되었습니다');
+      setPublishConfirm(false);
+      toast.success('설문이 발행되었습니다');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '상태 변경 실패');
-    } finally {
-      setChangingStatus(false);
-      setStatusDialogOpen(false);
-      setPendingStatus(null);
+      toast.error(err instanceof Error ? err.message : '발행 실패');
+      setPublishConfirm(false);
     }
   };
 
-  // --- Question handlers ---
+  const handleClose = async () => {
+    try {
+      const updated = await api<SurveyResponse>(`/surveys/${surveyId}/close`, {
+        method: 'PATCH',
+      });
+      setSurvey(updated);
+      setCloseConfirm(false);
+      toast.success('설문이 마감되었습니다');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '마감 실패');
+      setCloseConfirm(false);
+    }
+  };
+
+  // Question handlers
   const handleAddQuestion = async (data: {
     type: QuestionType;
     title: string;
@@ -295,26 +263,16 @@ export default function SurveyEditorPage() {
     }
   };
 
-  const handleDuplicateQuestion = async (question: QuestionResponse) => {
-    setSaving(true);
+  const handleDuplicateQuestion = async (questionId: string) => {
     try {
-      const created = await api<QuestionResponse>(`/surveys/${surveyId}/questions`, {
-        method: 'POST',
-        body: {
-          type: question.type,
-          title: `${question.title} (복사)`,
-          description: question.description || undefined,
-          required: question.required,
-          options: question.options,
-          validation: question.validation,
-        },
-      });
-      setQuestions((prev) => [...prev, created]);
+      await api<QuestionResponse>(
+        `/surveys/${surveyId}/questions/${questionId}/duplicate`,
+        { method: 'POST' },
+      );
+      await loadData();
       toast.success('질문이 복제되었습니다');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '질문 복제 실패');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -399,8 +357,6 @@ export default function SurveyEditorPage() {
     );
   }
 
-  const nextStatus = STATUS_FLOW[survey.status];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -412,7 +368,6 @@ export default function SurveyEditorPage() {
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            {/* Inline Title Editing */}
             {editingTitle ? (
               <Input
                 ref={titleInputRef}
@@ -423,81 +378,89 @@ export default function SurveyEditorPage() {
                   if (e.key === 'Enter') saveTitle();
                   if (e.key === 'Escape') setEditingTitle(false);
                 }}
-                className="text-2xl font-bold h-auto py-0 px-1 border-primary"
+                className="text-2xl font-bold h-auto py-0 px-1"
                 maxLength={200}
               />
             ) : (
               <h1
-                className={`text-2xl font-bold truncate ${isDraft ? 'cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1' : ''}`}
-                onClick={startEditTitle}
+                className={`text-2xl font-bold truncate ${isDraft ? 'cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1' : ''}`}
+                onClick={startEditingTitle}
                 title={isDraft ? '클릭하여 편집' : undefined}
               >
                 {survey.title}
               </h1>
             )}
-
-            {/* Status Badge + Dropdown */}
-            {nextStatus ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center gap-1 cursor-pointer">
-                    <Badge variant={STATUS_VARIANTS[survey.status]}>
-                      {STATUS_LABELS[survey.status]}
-                    </Badge>
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem
-                    onClick={() => handleStatusChange(nextStatus)}
-                    disabled={changingStatus}
-                  >
-                    {STATUS_ACTION_LABELS[survey.status]} → {STATUS_LABELS[nextStatus]}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Badge variant={STATUS_VARIANTS[survey.status]}>
-                {STATUS_LABELS[survey.status]}
-              </Badge>
-            )}
+            <Badge variant={isDraft ? 'secondary' : 'outline'}>
+              {STATUS_LABELS[survey.status]}
+            </Badge>
           </div>
-
-          {/* Inline Description Editing */}
           {editingDescription ? (
             <Textarea
-              ref={descriptionInputRef}
+              ref={descriptionRef}
               value={descriptionDraft}
               onChange={(e) => setDescriptionDraft(e.target.value)}
               onBlur={saveDescription}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') setEditingDescription(false);
               }}
-              className="mt-1 text-sm border-primary"
+              className="mt-1 text-sm"
               rows={2}
-              placeholder="설문 설명 입력"
+              placeholder="설문 설명을 입력하세요"
             />
           ) : (
             <p
-              className={`text-muted-foreground mt-1 text-sm ${isDraft ? 'cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1' : ''}`}
-              onClick={startEditDescription}
+              className={`text-muted-foreground mt-1 ${isDraft ? 'cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1' : ''}`}
+              onClick={startEditingDescription}
               title={isDraft ? '클릭하여 편집' : undefined}
             >
-              {survey.description || (isDraft ? '설문 설명을 추가하세요...' : '')}
+              {survey.description || (isDraft ? '설명을 추가하세요...' : '')}
             </p>
           )}
         </div>
-
         <div className="flex items-center gap-2 shrink-0">
-          <Link href={`/dashboard/surveys/${surveyId}/preview`} target="_blank">
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-1" />
-              미리보기
-            </Button>
-          </Link>
           <span className="text-sm text-muted-foreground">
             질문 {questions.length}개
           </span>
+          <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+            <Eye className="h-4 w-4 mr-1" />
+            미리보기
+          </Button>
+          {isDraft && (
+            <Button size="sm" onClick={() => setPublishConfirm(true)}>
+              <Send className="h-4 w-4 mr-1" />
+              발행
+            </Button>
+          )}
+          {(isActive || survey.status === 'closed') && (
+            <Link href={`/dashboard/surveys/${surveyId}/distribute`}>
+              <Button variant="outline" size="sm">
+                <Share2 className="h-4 w-4 mr-1" />
+                배포
+              </Button>
+            </Link>
+          )}
+          {(isActive || survey.status === 'closed') && (
+            <Link href={`/dashboard/surveys/${surveyId}/responses`}>
+              <Button variant="outline" size="sm">
+                <BarChart3 className="h-4 w-4 mr-1" />
+                응답
+              </Button>
+            </Link>
+          )}
+          {(isActive || survey.status === 'closed') && (
+            <Link href={`/dashboard/surveys/${surveyId}/report`}>
+              <Button variant="outline" size="sm">
+                <PieChart className="h-4 w-4 mr-1" />
+                리포트
+              </Button>
+            </Link>
+          )}
+          {isActive && (
+            <Button variant="secondary" size="sm" onClick={() => setCloseConfirm(true)}>
+              <Square className="h-4 w-4 mr-1" />
+              마감
+            </Button>
+          )}
         </div>
       </div>
 
@@ -508,34 +471,7 @@ export default function SurveyEditorPage() {
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="flex border-b">
-        <button
-          className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === 'questions'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('questions')}
-        >
-          <ListChecks className="h-4 w-4" />
-          질문 ({questions.length})
-        </button>
-        <button
-          className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === 'targets'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('targets')}
-        >
-          <Users className="h-4 w-4" />
-          대상자
-        </button>
-      </div>
-
-      {/* Questions Tab */}
-      {activeTab === 'questions' && (
+      {/* Questions */}
       <TooltipProvider delayDuration={300}>
       <div className="space-y-3">
         {questions.length === 0 && !isAdding ? (
@@ -579,7 +515,7 @@ export default function SurveyEditorPage() {
                       setIsAdding(false);
                     }}
                     onDelete={() => setDeleteTarget(question)}
-                    onDuplicate={() => handleDuplicateQuestion(question)}
+                    onDuplicate={() => handleDuplicateQuestion(question.id)}
                     onMoveUp={() => handleReorder(index, -1)}
                     onMoveDown={() => handleReorder(index, 1)}
                   />
@@ -614,12 +550,14 @@ export default function SurveyEditorPage() {
         )}
       </div>
       </TooltipProvider>
-      )}
 
-      {/* Targets Tab */}
-      {activeTab === 'targets' && (
-        <TargetManager surveyId={surveyId} isDraft={isDraft} />
-      )}
+      {/* Preview Dialog */}
+      <SurveyPreview
+        survey={survey}
+        questions={questions}
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
@@ -637,24 +575,34 @@ export default function SurveyEditorPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Status Change Confirmation (ACTIVE) */}
-      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+      {/* Publish Confirmation */}
+      <AlertDialog open={publishConfirm} onOpenChange={setPublishConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>설문 발행</AlertDialogTitle>
             <AlertDialogDescription>
-              설문을 발행하시겠습니까? 발행 후에는 질문을 수정할 수 없습니다.
-              이 작업은 되돌릴 수 없습니다.
+              이 설문을 발행하시겠습니까? 발행 후에는 질문을 수정할 수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={changingStatus}>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmStatusChange()}
-              disabled={changingStatus}
-            >
-              {changingStatus ? '변경 중...' : '발행'}
-            </AlertDialogAction>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePublish}>발행</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Close Confirmation */}
+      <AlertDialog open={closeConfirm} onOpenChange={setCloseConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>설문 마감</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 설문을 마감하시겠습니까? 마감 후에는 더 이상 응답을 받을 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClose}>마감</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
