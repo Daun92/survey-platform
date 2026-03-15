@@ -1,18 +1,18 @@
 'use client';
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { QUESTION_TYPE_LABELS } from './question-form';
-import type { SurveyResponse, QuestionResponse, QuestionOptions } from '@survey/shared';
+import type { SurveyResponse, QuestionResponse } from '@survey/shared';
 
 interface SurveyPreviewProps {
   survey: SurveyResponse;
@@ -23,12 +23,12 @@ interface SurveyPreviewProps {
 
 export function SurveyPreview({ survey, questions, open, onClose }: SurveyPreviewProps) {
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle>설문 미리보기</DialogTitle>
-          <p className="text-sm text-muted-foreground">응답자에게 보이는 화면입니다</p>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] p-0 flex flex-col">
+        <SheetHeader className="px-6 pt-6 pb-0">
+          <SheetTitle>설문 미리보기</SheetTitle>
+          <p className="text-sm text-muted-foreground">모바일 화면 기준 미리보기</p>
+        </SheetHeader>
 
         <ScrollArea className="flex-1 px-6 pb-6">
           <div className="space-y-6 py-4">
@@ -57,8 +57,8 @@ export function SurveyPreview({ survey, questions, open, onClose }: SurveyPrevie
             )}
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

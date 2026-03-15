@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -12,9 +15,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -22,9 +38,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, MoreVertical, Trash2, Search, MessageSquare, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import type { ProjectResponse, SurveyResponse, SurveyStatus } from '@survey/shared';
 
 const STATUS_LABELS: Record<SurveyStatus, string> = {
@@ -41,6 +58,15 @@ const STATUS_VARIANTS: Record<SurveyStatus, 'secondary' | 'default' | 'outline' 
   archived: 'destructive',
 };
 
+type FilterStatus = 'all' | 'draft' | 'active' | 'closed' | 'archived';
+
+const filterTabs: { label: string; value: FilterStatus }[] = [
+  { label: '전체', value: 'all' },
+  { label: '초안', value: 'draft' },
+  { label: '진행 중', value: 'active' },
+  { label: '마감', value: 'closed' },
+];
+
 interface ProjectWithSurveys {
   project: ProjectResponse;
   surveys: SurveyResponse[];
@@ -52,6 +78,13 @@ export default function SurveysPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newSurvey, setNewSurvey] = useState({ projectId: '', title: '', description: '' });
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Delete
+  const [deleteTarget, setDeleteTarget] = useState<SurveyResponse | null>(null);
 
   const loadData = async () => {
     try {
@@ -71,6 +104,23 @@ export default function SurveysPage() {
   };
 
   useEffect(() => { loadData(); }, []);
+
+  const filteredData = useMemo(() => {
+    return data.map(({ project, surveys }) => ({
+      project,
+      surveys: surveys.filter((s) => {
+        if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          return (
+            s.title.toLowerCase().includes(q) ||
+            (s.description ?? '').toLowerCase().includes(q)
+          );
+        }
+        return true;
+      }),
+    })).filter(({ surveys }) => surveys.length > 0 || (!searchQuery.trim() && statusFilter === 'all'));
+  }, [data, statusFilter, searchQuery]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +147,20 @@ export default function SurveysPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api(`/surveys/${deleteTarget.id}`, { method: 'DELETE' });
+      setDeleteTarget(null);
+      toast.success('설문이 삭제되었습니다');
+      setLoading(true);
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '설문 삭제 실패');
+      setDeleteTarget(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -108,7 +172,7 @@ export default function SurveysPage() {
               새 설문
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>새 설문 만들기</DialogTitle>
             </DialogHeader>
@@ -163,6 +227,35 @@ export default function SurveysPage() {
         </Dialog>
       </div>
 
+      {/* Status Filter Tabs + Search */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex gap-1 border rounded-lg p-1">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setStatusFilter(tab.value)}
+              className={cn(
+                'px-3 py-1.5 text-sm rounded-md transition-colors',
+                statusFilter === tab.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="설문 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       {loading ? (
         <div className="space-y-6">
           {[...Array(2)].map((_, i) => (
@@ -183,13 +276,17 @@ export default function SurveysPage() {
             </div>
           ))}
         </div>
-      ) : data.length === 0 ? (
+      ) : filteredData.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">프로젝트가 없습니다. 먼저 프로젝트를 생성하세요.</p>
+          <p className="text-muted-foreground">
+            {data.length === 0
+              ? '프로젝트가 없습니다. 먼저 프로젝트를 생성하세요.'
+              : '조건에 맞는 설문이 없습니다.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
-          {data.map(({ project, surveys }) => (
+          {filteredData.map(({ project, surveys }) => (
             <div key={project.id} className="space-y-2">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 {project.title}
@@ -205,27 +302,59 @@ export default function SurveysPage() {
                   {surveys.map((survey) => (
                     <div
                       key={survey.id}
-                      className="flex items-center justify-between rounded-lg border p-4"
+                      className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/30 transition-colors"
                     >
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium">{survey.title}</p>
+                          <Link
+                            href={`/dashboard/surveys/${survey.id}/edit`}
+                            className="font-medium hover:underline truncate"
+                          >
+                            {survey.title}
+                          </Link>
                           <Badge variant={STATUS_VARIANTS[survey.status]}>
                             {STATUS_LABELS[survey.status]}
                           </Badge>
                         </div>
                         {survey.description && (
-                          <p className="text-sm text-muted-foreground mt-0.5">
+                          <p className="text-sm text-muted-foreground mt-0.5 truncate">
                             {survey.description}
                           </p>
                         )}
+                        <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            응답 {survey.responseCount}건
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(survey.updatedAt).toLocaleDateString('ko-KR')}
+                          </span>
+                          <span>{survey.createdByName}</span>
+                        </div>
                       </div>
-                      <Link href={`/dashboard/surveys/${survey.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          <Pencil className="h-3.5 w-3.5 mr-1" />
-                          편집
-                        </Button>
-                      </Link>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/surveys/${survey.id}/edit`}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              편집
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteTarget(survey)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            삭제
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>
@@ -234,6 +363,22 @@ export default function SurveysPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>설문 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{deleteTarget?.title}&quot; 설문을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -6,16 +6,22 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { QuestionTypeConfig } from './question-type-config';
 import { QuestionType } from '@survey/shared';
 import type { QuestionOptions, ValidationRule, QuestionResponse } from '@survey/shared';
+import {
+  Type,
+  AlignLeft,
+  CircleDot,
+  CheckSquare,
+  ChevronDown,
+  SlidersHorizontal,
+  Calendar,
+  Paperclip,
+  Grid3X3,
+  ArrowUpDown,
+} from 'lucide-react';
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   [QuestionType.SHORT_TEXT]: '단답형',
@@ -30,6 +36,19 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   [QuestionType.RANKING]: '순위',
 };
 
+const QUESTION_TYPE_ICONS: Record<QuestionType, React.ComponentType<{ className?: string }>> = {
+  [QuestionType.SHORT_TEXT]: Type,
+  [QuestionType.LONG_TEXT]: AlignLeft,
+  [QuestionType.RADIO]: CircleDot,
+  [QuestionType.CHECKBOX]: CheckSquare,
+  [QuestionType.DROPDOWN]: ChevronDown,
+  [QuestionType.LINEAR_SCALE]: SlidersHorizontal,
+  [QuestionType.DATE]: Calendar,
+  [QuestionType.FILE_UPLOAD]: Paperclip,
+  [QuestionType.MATRIX]: Grid3X3,
+  [QuestionType.RANKING]: ArrowUpDown,
+};
+
 interface QuestionFormData {
   type: QuestionType;
   title: string;
@@ -41,6 +60,7 @@ interface QuestionFormData {
 
 interface QuestionFormProps {
   initialData?: QuestionResponse;
+  defaultType?: QuestionType;
   onSubmit: (data: QuestionFormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
@@ -77,7 +97,7 @@ function getDefaultOptions(type: QuestionType): QuestionOptions {
   }
 }
 
-export function QuestionForm({ initialData, onSubmit, onCancel, isLoading }: QuestionFormProps) {
+export function QuestionForm({ initialData, defaultType, onSubmit, onCancel, isLoading }: QuestionFormProps) {
   const [form, setForm] = useState<QuestionFormData>(() => {
     if (initialData) {
       return {
@@ -89,12 +109,13 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isLoading }: Que
         validation: initialData.validation ?? { required: initialData.required },
       };
     }
+    const type = defaultType ?? QuestionType.SHORT_TEXT;
     return {
-      type: QuestionType.SHORT_TEXT,
+      type,
       title: '',
       description: '',
       required: false,
-      options: {},
+      options: getDefaultOptions(type),
       validation: { required: false },
     };
   });
@@ -116,35 +137,45 @@ export function QuestionForm({ initialData, onSubmit, onCancel, isLoading }: Que
     });
   };
 
+  const isEditMode = !!initialData;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg bg-muted/30">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>질문 유형</Label>
-          <Select
-            value={form.type}
-            onValueChange={(v) => handleTypeChange(v as QuestionType)}
-            disabled={!!initialData}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(QUESTION_TYPE_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Visual Type Grid */}
+      <div>
+        <Label className="mb-2 block">질문 유형</Label>
+        <div className="grid grid-cols-5 gap-2">
+          {Object.entries(QUESTION_TYPE_LABELS).map(([value, label]) => {
+            const Icon = QUESTION_TYPE_ICONS[value as QuestionType];
+            const isSelected = form.type === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                disabled={isEditMode}
+                onClick={() => handleTypeChange(value as QuestionType)}
+                className={cn(
+                  'flex flex-col items-center gap-1.5 p-2.5 rounded-lg border text-xs font-medium transition-colors',
+                  isSelected
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
+                  isEditMode && 'opacity-50 cursor-not-allowed',
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="truncate w-full text-center">{label.replace(/ \(.*\)/, '')}</span>
+              </button>
+            );
+          })}
         </div>
-        <div className="flex items-end gap-2 pb-0.5">
-          <Switch
-            checked={form.required}
-            onCheckedChange={(checked) => setForm((prev) => ({ ...prev, required: checked }))}
-          />
-          <Label>필수 응답</Label>
-        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={form.required}
+          onCheckedChange={(checked) => setForm((prev) => ({ ...prev, required: checked }))}
+        />
+        <Label>필수 응답</Label>
       </div>
 
       <div>

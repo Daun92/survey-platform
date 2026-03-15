@@ -2,10 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -25,17 +23,12 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import { QuestionCard } from '@/components/survey-editor/question-card';
 import { QuestionForm } from '@/components/survey-editor/question-form';
 import { SurveyPreview } from '@/components/survey-editor/survey-preview';
-import { ArrowLeft, Plus, Eye, Send, Square, Share2, BarChart3, PieChart } from 'lucide-react';
+import { EmptyState } from '@/components/survey-editor/empty-state';
+import { AiChatPanel } from '@/components/ai-chat/ai-chat-panel';
+import { Plus, Eye, Send, Square, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { SurveyStatus } from '@survey/shared';
-import type { SurveyResponse, QuestionResponse, QuestionType, QuestionOptions, ValidationRule } from '@survey/shared';
-
-const STATUS_LABELS: Record<SurveyStatus, string> = {
-  [SurveyStatus.DRAFT]: '초안',
-  [SurveyStatus.ACTIVE]: '진행 중',
-  [SurveyStatus.CLOSED]: '마감',
-  [SurveyStatus.ARCHIVED]: '보관',
-};
+import { SurveyStatus, QuestionType } from '@survey/shared';
+import type { SurveyResponse, QuestionResponse, QuestionOptions, ValidationRule, TemplateQuestion } from '@survey/shared';
 
 export default function SurveyEditorPage() {
   const params = useParams();
@@ -49,11 +42,15 @@ export default function SurveyEditorPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [defaultType, setDefaultType] = useState<QuestionType | undefined>();
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<QuestionResponse | null>(null);
 
   // Preview
   const [showPreview, setShowPreview] = useState(false);
+
+  // AI Chat
+  const [showAiChat, setShowAiChat] = useState(false);
 
   // Inline editing
   const [editingTitle, setEditingTitle] = useState(false);
@@ -207,6 +204,7 @@ export default function SurveyEditorPage() {
       });
       setQuestions((prev) => [...prev, created]);
       setIsAdding(false);
+      setDefaultType(undefined);
       toast.success('질문이 추가되었습니다');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '질문 추가 실패');
@@ -319,17 +317,61 @@ export default function SurveyEditorPage() {
     }
   };
 
+  // Empty state handlers
+  const handleQuickAdd = (type: QuestionType) => {
+    setDefaultType(type);
+    setIsAdding(true);
+    setEditingId(null);
+  };
+
+  const handlePresetSelect = async (presetQuestions: TemplateQuestion[]) => {
+    try {
+      const payload = presetQuestions.map((q, i) => ({
+        type: q.type,
+        title: q.title,
+        description: q.description,
+        required: q.required,
+        order: questions.length + i,
+        options: q.options,
+        validation: q.validation,
+      }));
+      await api(`/surveys/${surveyId}/questions/bulk`, {
+        method: 'POST',
+        body: { questions: payload },
+      });
+      await loadData();
+      toast.success(`${presetQuestions.length}개 질문이 추가되었습니다`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '프리셋 추가 실패');
+    }
+  };
+
+  // AI questions generated callback
+  const handleAiQuestionsGenerated = async (generatedQuestions: TemplateQuestion[]) => {
+    try {
+      const payload = generatedQuestions.map((q, i) => ({
+        type: q.type,
+        title: q.title,
+        description: q.description,
+        required: q.required,
+        order: questions.length + i,
+        options: q.options,
+        validation: q.validation,
+      }));
+      await api(`/surveys/${surveyId}/questions/bulk`, {
+        method: 'POST',
+        body: { questions: payload },
+      });
+      await loadData();
+      toast.success(`${generatedQuestions.length}개 질문이 AI로 생성되었습니다`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'AI 질문 추가 실패');
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-9 w-9" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-7 w-1/3" />
-            <Skeleton className="h-4 w-1/2" />
-          </div>
-          <Skeleton className="h-8 w-24" />
-        </div>
         <Skeleton className="h-10 w-full" />
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -359,41 +401,31 @@ export default function SurveyEditorPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/surveys">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {editingTitle ? (
-              <Input
-                ref={titleInputRef}
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                onBlur={saveTitle}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveTitle();
-                  if (e.key === 'Escape') setEditingTitle(false);
-                }}
-                className="text-2xl font-bold h-auto py-0 px-1"
-                maxLength={200}
-              />
-            ) : (
-              <h1
-                className={`text-2xl font-bold truncate ${isDraft ? 'cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1' : ''}`}
-                onClick={startEditingTitle}
-                title={isDraft ? '클릭하여 편집' : undefined}
-              >
-                {survey.title}
-              </h1>
-            )}
-            <Badge variant={isDraft ? 'secondary' : 'outline'}>
-              {STATUS_LABELS[survey.status]}
-            </Badge>
-          </div>
+      {/* Inline Title/Description Editing + Actions */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0 space-y-1">
+          {editingTitle ? (
+            <Input
+              ref={titleInputRef}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveTitle();
+                if (e.key === 'Escape') setEditingTitle(false);
+              }}
+              className="text-lg font-semibold h-auto py-1 px-2"
+              maxLength={200}
+            />
+          ) : (
+            <h2
+              className={`text-lg font-semibold ${isDraft ? 'cursor-pointer hover:bg-accent/50 rounded px-2 -mx-2 py-1' : ''}`}
+              onClick={startEditingTitle}
+              title={isDraft ? '클릭하여 제목 편집' : undefined}
+            >
+              {survey.title}
+            </h2>
+          )}
           {editingDescription ? (
             <Textarea
               ref={descriptionRef}
@@ -403,15 +435,15 @@ export default function SurveyEditorPage() {
               onKeyDown={(e) => {
                 if (e.key === 'Escape') setEditingDescription(false);
               }}
-              className="mt-1 text-sm"
+              className="text-sm"
               rows={2}
               placeholder="설문 설명을 입력하세요"
             />
           ) : (
             <p
-              className={`text-muted-foreground mt-1 ${isDraft ? 'cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1' : ''}`}
+              className={`text-sm text-muted-foreground ${isDraft ? 'cursor-pointer hover:bg-accent/50 rounded px-2 -mx-2 py-0.5' : ''}`}
               onClick={startEditingDescription}
-              title={isDraft ? '클릭하여 편집' : undefined}
+              title={isDraft ? '클릭하여 설명 편집' : undefined}
             >
               {survey.description || (isDraft ? '설명을 추가하세요...' : '')}
             </p>
@@ -421,6 +453,12 @@ export default function SurveyEditorPage() {
           <span className="text-sm text-muted-foreground">
             질문 {questions.length}개
           </span>
+          {isDraft && (
+            <Button variant="outline" size="sm" onClick={() => setShowAiChat(true)}>
+              <Sparkles className="h-4 w-4 mr-1" />
+              AI 어시스턴트
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
             <Eye className="h-4 w-4 mr-1" />
             미리보기
@@ -430,30 +468,6 @@ export default function SurveyEditorPage() {
               <Send className="h-4 w-4 mr-1" />
               발행
             </Button>
-          )}
-          {(isActive || survey.status === 'closed') && (
-            <Link href={`/dashboard/surveys/${surveyId}/distribute`}>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-1" />
-                배포
-              </Button>
-            </Link>
-          )}
-          {(isActive || survey.status === 'closed') && (
-            <Link href={`/dashboard/surveys/${surveyId}/responses`}>
-              <Button variant="outline" size="sm">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                응답
-              </Button>
-            </Link>
-          )}
-          {(isActive || survey.status === 'closed') && (
-            <Link href={`/dashboard/surveys/${surveyId}/report`}>
-              <Button variant="outline" size="sm">
-                <PieChart className="h-4 w-4 mr-1" />
-                리포트
-              </Button>
-            </Link>
           )}
           {isActive && (
             <Button variant="secondary" size="sm" onClick={() => setCloseConfirm(true)}>
@@ -466,7 +480,7 @@ export default function SurveyEditorPage() {
 
       {!isDraft && (
         <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm">
-          이 설문은 <strong>{STATUS_LABELS[survey.status]}</strong> 상태입니다.
+          이 설문은 <strong>{survey.status === SurveyStatus.ACTIVE ? '진행 중' : survey.status === SurveyStatus.CLOSED ? '마감' : survey.status}</strong> 상태입니다.
           질문을 수정하려면 초안(draft) 상태여야 합니다.
         </div>
       )}
@@ -475,15 +489,13 @@ export default function SurveyEditorPage() {
       <TooltipProvider delayDuration={300}>
       <div className="space-y-3">
         {questions.length === 0 && !isAdding ? (
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-muted-foreground mb-3">아직 질문이 없습니다.</p>
-            {isDraft && (
-              <Button onClick={() => setIsAdding(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                첫 질문 추가
-              </Button>
-            )}
-          </div>
+          isDraft ? (
+            <EmptyState onQuickAdd={handleQuickAdd} onPresetSelect={handlePresetSelect} />
+          ) : (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <p className="text-muted-foreground">아직 질문이 없습니다.</p>
+            </div>
+          )
         ) : (
           <DndContext
             sensors={sensors}
@@ -528,8 +540,9 @@ export default function SurveyEditorPage() {
         {/* Add Question */}
         {isAdding ? (
           <QuestionForm
+            defaultType={defaultType}
             onSubmit={handleAddQuestion}
-            onCancel={() => setIsAdding(false)}
+            onCancel={() => { setIsAdding(false); setDefaultType(undefined); }}
             isLoading={saving}
           />
         ) : (
@@ -541,6 +554,7 @@ export default function SurveyEditorPage() {
               onClick={() => {
                 setIsAdding(true);
                 setEditingId(null);
+                setDefaultType(undefined);
               }}
             >
               <Plus className="h-4 w-4 mr-1" />
@@ -551,12 +565,21 @@ export default function SurveyEditorPage() {
       </div>
       </TooltipProvider>
 
-      {/* Preview Dialog */}
+      {/* Preview Sheet */}
       <SurveyPreview
         survey={survey}
         questions={questions}
         open={showPreview}
         onClose={() => setShowPreview(false)}
+      />
+
+      {/* AI Chat Panel */}
+      <AiChatPanel
+        surveyId={surveyId}
+        existingQuestions={questions}
+        onQuestionsGenerated={handleAiQuestionsGenerated}
+        open={showAiChat}
+        onOpenChange={setShowAiChat}
       />
 
       {/* Delete Confirmation */}

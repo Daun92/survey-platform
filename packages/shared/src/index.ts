@@ -389,6 +389,32 @@ export interface UseTemplateRequest {
   title?: string;
 }
 
+// === AI Chat Types ===
+
+export interface AiChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  attachments?: AiChatAttachment[];
+  questions?: TemplateQuestion[];
+  timestamp: string;
+}
+
+export interface AiChatAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+}
+
+export interface AiChatRequest {
+  surveyId: string;
+  message: string;
+  attachmentIds?: string[];
+  conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  existingQuestions?: Array<{ type: string; title: string }>;
+}
+
 // === AI Generation Types ===
 
 export interface AiGenerateRequest {

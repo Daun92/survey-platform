@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Plus, Copy, Link as LinkIcon, Check } from 'lucide-react';
+import { Plus, Copy, Link as LinkIcon, Check } from 'lucide-react';
 import type { SurveyResponse } from '@survey/shared';
 import { DistributionChannel } from '@survey/shared';
 import type { DistributionResponse, DistributionConfig } from '@survey/shared';
@@ -138,17 +138,8 @@ export default function DistributePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={`/dashboard/surveys/${surveyId}/edit`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">배포 관리</h1>
-          <p className="text-muted-foreground">{survey?.title}</p>
-        </div>
+      {/* Actions */}
+      <div className="flex items-center justify-end">
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4 mr-1" />
           링크 생성
@@ -226,7 +217,7 @@ export default function DistributePage() {
 
       {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>배포 링크 생성</DialogTitle>
           </DialogHeader>
