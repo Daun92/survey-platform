@@ -16,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
         autoLoadEntities: true,
         synchronize: config.get<string>('NODE_ENV') !== 'production',
         logging: config.get<string>('NODE_ENV') === 'development',
+        extra: { options: '-c client_encoding=UTF8' },
       }),
     }),
   ],
