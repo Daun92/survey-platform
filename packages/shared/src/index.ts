@@ -405,6 +405,24 @@ export interface AiGenerateResponse {
   questions: TemplateQuestion[];
 }
 
+// === Dashboard Types ===
+
+export interface DashboardStats {
+  totalProjects: number;
+  totalSurveys: number;
+  activeSurveys: number;
+  totalResponses: number;
+  totalTemplates: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: 'survey_created' | 'survey_published' | 'response_received' | 'template_created';
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
 // === App Constants ===
 
 export const APP_CONSTANTS = {

@@ -15,6 +15,7 @@ import { ResponsesModule } from './responses/responses.module';
 import { ReportModule } from './report/report.module';
 import { TemplatesModule } from './templates/templates.module';
 import { AiModule } from './ai/ai.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AiModule } from './ai/ai.module';
     ReportModule,
     TemplatesModule,
     AiModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}
