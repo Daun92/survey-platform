@@ -15,11 +15,7 @@ export function Header() {
   }, []);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b px-6">
-      <h2 className="text-lg font-semibold">
-        {/* 페이지별 타이틀은 각 페이지에서 설정 */}
-      </h2>
-
+    <div className="flex flex-1 items-center justify-end">
       {user && (
         <div className="flex items-center gap-3 text-sm">
           <span className="text-muted-foreground">{user.name}</span>
@@ -28,6 +24,6 @@ export function Header() {
           </span>
         </div>
       )}
-    </header>
+    </div>
   );
 }

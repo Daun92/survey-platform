@@ -30,7 +30,11 @@ const navItems = [
   { href: '/dashboard/settings', label: '설정', icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarNavProps {
+  onNavigate?: () => void;
+}
+
+export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
@@ -44,7 +48,7 @@ export function Sidebar() {
     >
       <div className="flex h-14 items-center justify-between border-b px-3">
         {!collapsed && (
-          <Link href="/dashboard" className="text-lg font-bold truncate">
+          <Link href="/dashboard" className="text-lg font-bold truncate" onClick={onNavigate}>
             Survey Platform
           </Link>
         )}
@@ -65,6 +69,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               title={collapsed ? item.label : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
@@ -109,5 +114,13 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <div className="hidden md:flex">
+      <SidebarNav />
+    </div>
   );
 }

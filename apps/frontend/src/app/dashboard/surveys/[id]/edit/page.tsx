@@ -18,10 +18,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { QuestionCard } from '@/components/survey-editor/question-card';
 import { QuestionForm } from '@/components/survey-editor/question-form';
 import { SurveyPreview } from '@/components/survey-editor/survey-preview';
 import { ArrowLeft, Plus, Eye, Send, Square, Share2, BarChart3, PieChart } from 'lucide-react';
+import { toast } from 'sonner';
 import { SurveyStatus } from '@survey/shared';
 import type { SurveyResponse, QuestionResponse, QuestionType, QuestionOptions, ValidationRule } from '@survey/shared';
 
@@ -61,6 +66,11 @@ export default function SurveyEditorPage() {
   // Publish/Close confirmation
   const [publishConfirm, setPublishConfirm] = useState(false);
   const [closeConfirm, setCloseConfirm] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const isDraft = survey?.status === SurveyStatus.DRAFT;
   const isActive = survey?.status === SurveyStatus.ACTIVE;
@@ -106,8 +116,9 @@ export default function SurveyEditorPage() {
         body: { title: titleDraft.trim() },
       });
       setSurvey(updated);
+      toast.success('제목이 저장되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '제목 저장 실패');
+      toast.error(err instanceof Error ? err.message : '제목 저장 실패');
     }
     setEditingTitle(false);
   };
@@ -136,8 +147,9 @@ export default function SurveyEditorPage() {
         body: { description: newDesc || '' },
       });
       setSurvey(updated);
+      toast.success('설명이 저장되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '설명 저장 실패');
+      toast.error(err instanceof Error ? err.message : '설명 저장 실패');
     }
     setEditingDescription(false);
   };
@@ -150,8 +162,9 @@ export default function SurveyEditorPage() {
       });
       setSurvey(updated);
       setPublishConfirm(false);
+      toast.success('설문이 발행되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '발행 실패');
+      toast.error(err instanceof Error ? err.message : '발행 실패');
       setPublishConfirm(false);
     }
   };
@@ -163,8 +176,9 @@ export default function SurveyEditorPage() {
       });
       setSurvey(updated);
       setCloseConfirm(false);
+      toast.success('설문이 마감되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '마감 실패');
+      toast.error(err instanceof Error ? err.message : '마감 실패');
       setCloseConfirm(false);
     }
   };
@@ -193,8 +207,9 @@ export default function SurveyEditorPage() {
       });
       setQuestions((prev) => [...prev, created]);
       setIsAdding(false);
+      toast.success('질문이 추가되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '질문 추가 실패');
+      toast.error(err instanceof Error ? err.message : '질문 추가 실패');
     } finally {
       setSaving(false);
     }
@@ -228,8 +243,9 @@ export default function SurveyEditorPage() {
       );
       setQuestions((prev) => prev.map((q) => (q.id === questionId ? updated : q)));
       setEditingId(null);
+      toast.success('질문이 수정되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '질문 수정 실패');
+      toast.error(err instanceof Error ? err.message : '질문 수정 실패');
     } finally {
       setSaving(false);
     }
@@ -241,8 +257,9 @@ export default function SurveyEditorPage() {
       await api(`/surveys/${surveyId}/questions/${deleteTarget.id}`, { method: 'DELETE' });
       setQuestions((prev) => prev.filter((q) => q.id !== deleteTarget.id));
       setDeleteTarget(null);
+      toast.success('질문이 삭제되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '질문 삭제 실패');
+      toast.error(err instanceof Error ? err.message : '질문 삭제 실패');
     }
   };
 
@@ -253,8 +270,32 @@ export default function SurveyEditorPage() {
         { method: 'POST' },
       );
       await loadData();
+      toast.success('질문이 복제되었습니다');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '질문 복제 실패');
+      toast.error(err instanceof Error ? err.message : '질문 복제 실패');
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = questions.findIndex((q) => q.id === active.id);
+    const newIndex = questions.findIndex((q) => q.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const updated = arrayMove(questions, oldIndex, newIndex);
+    const questionOrders = updated.map((q, i) => ({ id: q.id, order: i }));
+
+    setQuestions(updated);
+    try {
+      await api(`/surveys/${surveyId}/questions/reorder`, {
+        method: 'PATCH',
+        body: { questionOrders },
+      });
+    } catch (err) {
+      await loadData();
+      toast.error(err instanceof Error ? err.message : '순서 변경 실패');
     }
   };
 
@@ -274,14 +315,33 @@ export default function SurveyEditorPage() {
       });
     } catch (err) {
       await loadData();
-      alert(err instanceof Error ? err.message : '순서 변경 실패');
+      toast.error(err instanceof Error ? err.message : '순서 변경 실패');
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">로딩 중...</p>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-9 w-9" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-7 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+          <Skeleton className="h-8 w-24" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-start gap-3 p-4 border rounded-lg">
+              <Skeleton className="h-6 w-6" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -411,7 +471,8 @@ export default function SurveyEditorPage() {
         </div>
       )}
 
-      {/* Question List */}
+      {/* Questions */}
+      <TooltipProvider delayDuration={300}>
       <div className="space-y-3">
         {questions.length === 0 && !isAdding ? (
           <div className="rounded-lg border border-dashed p-8 text-center">
@@ -424,33 +485,44 @@ export default function SurveyEditorPage() {
             )}
           </div>
         ) : (
-          questions.map((question, index) =>
-            editingId === question.id ? (
-              <QuestionForm
-                key={question.id}
-                initialData={question}
-                onSubmit={(data) => handleUpdateQuestion(question.id, data)}
-                onCancel={() => setEditingId(null)}
-                isLoading={saving}
-              />
-            ) : (
-              <QuestionCard
-                key={question.id}
-                question={question}
-                index={index}
-                total={questions.length}
-                isEditable={isDraft}
-                onEdit={() => {
-                  setEditingId(question.id);
-                  setIsAdding(false);
-                }}
-                onDelete={() => setDeleteTarget(question)}
-                onDuplicate={() => handleDuplicateQuestion(question.id)}
-                onMoveUp={() => handleReorder(index, -1)}
-                onMoveDown={() => handleReorder(index, 1)}
-              />
-            ),
-          )
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={questions.map((q) => q.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {questions.map((question, index) =>
+                editingId === question.id ? (
+                  <QuestionForm
+                    key={question.id}
+                    initialData={question}
+                    onSubmit={(data) => handleUpdateQuestion(question.id, data)}
+                    onCancel={() => setEditingId(null)}
+                    isLoading={saving}
+                  />
+                ) : (
+                  <QuestionCard
+                    key={question.id}
+                    question={question}
+                    index={index}
+                    total={questions.length}
+                    isEditable={isDraft}
+                    onEdit={() => {
+                      setEditingId(question.id);
+                      setIsAdding(false);
+                    }}
+                    onDelete={() => setDeleteTarget(question)}
+                    onDuplicate={() => handleDuplicateQuestion(question.id)}
+                    onMoveUp={() => handleReorder(index, -1)}
+                    onMoveDown={() => handleReorder(index, 1)}
+                  />
+                ),
+              )}
+            </SortableContext>
+          </DndContext>
         )}
 
         {/* Add Question */}
@@ -477,6 +549,7 @@ export default function SurveyEditorPage() {
           )
         )}
       </div>
+      </TooltipProvider>
 
       {/* Preview Dialog */}
       <SurveyPreview
